@@ -573,8 +573,9 @@ function generate() {
 
   // Base CSS
   const baseCss = `*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; overflow-x: auto; }
 body { background: #fff; }
-.frame-root { position: relative; width: ${bb.width}px; max-width: 100%; overflow: hidden; }
+.frame-root { position: relative; width: ${bb.width}px; height: ${bb.height}px; overflow: hidden; }
 img { max-width: 100%; display: block; }
 .frame-img-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }`;
 
@@ -704,11 +705,18 @@ function nodeCSS(node, rootBB, rootFrame) {
 
   // Position
   if (bb && rootBB) {
-    rules.push(`position: absolute`);
-    rules.push(`left: ${(bb.x - rootBB.x).toFixed(1)}px`);
-    rules.push(`top: ${(bb.y - rootBB.y).toFixed(1)}px`);
-    rules.push(`width: ${bb.width.toFixed(1)}px`);
-    rules.push(`height: ${bb.height.toFixed(1)}px`);
+    const isRoot = node === rootFrame;
+    if (isRoot) {
+      rules.push(`position: relative`);
+      rules.push(`width: ${bb.width.toFixed(1)}px`);
+      rules.push(`height: ${bb.height.toFixed(1)}px`);
+    } else {
+      rules.push(`position: absolute`);
+      rules.push(`left: ${(bb.x - rootBB.x).toFixed(1)}px`);
+      rules.push(`top: ${(bb.y - rootBB.y).toFixed(1)}px`);
+      rules.push(`width: ${bb.width.toFixed(1)}px`);
+      rules.push(`height: ${bb.height.toFixed(1)}px`);
+    }
   }
 
   // Fills
