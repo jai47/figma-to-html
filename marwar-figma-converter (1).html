@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figma → HTML Converter | Marwar Fresh</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root {
+  --bg: #0d0f1a;
+  --surface: #141624;
+  --surface2: #1a1d30;
+  --border: #252840;
+  --accent: #6c47ff;
+  --accent-light: #9d7dff;
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --success: #22c55e;
+  --error: #ef4444;
+  --warning: #f59e0b;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── Header ── */
+.header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 0 24px; height: 52px; display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+}
+.logo { font-weight: 800; font-size: 15px; letter-spacing: -0.3px; }
+.logo em { color: var(--accent-light); font-style: normal; }
+.pill { background: var(--accent)22; color: var(--accent-light); border: 1px solid var(--accent)44; border-radius: 20px; padding: 2px 10px; font-size: 11px; font-weight: 700; }
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+
+/* ── Layout ── */
+.body { display: flex; flex: 1; overflow: hidden; }
+
+/* ── Sidebar ── */
+.sidebar { width: 300px; min-width: 300px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
+.panel { padding: 16px; border-bottom: 1px solid var(--border); }
+.panel-title { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 12px; }
+
+label { display: block; font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 5px; margin-top: 10px; }
+label:first-of-type { margin-top: 0; }
+input, select {
+  width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+  border-radius: 7px; padding: 8px 11px; font-size: 13px; font-family: inherit;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus { outline: none; border-color: var(--accent); }
+input[type=password] { font-family: monospace; letter-spacing: 1px; }
+
+/* ── Buttons ── */
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  width: 100%; padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 700;
+  cursor: pointer; border: none; transition: all 0.15s; margin-top: 10px;
+}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+.btn-primary { background: linear-gradient(135deg, var(--accent), #5035cc); color: #fff; }
+.btn-primary:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--accent)55; }
+.btn-ghost { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+.btn-ghost:not(:disabled):hover { color: var(--text); border-color: var(--accent)66; }
+.btn-green { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; }
+.btn-green:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 6px 20px #16a34a55; }
+
+/* ── Progress steps ── */
+.steps { display: flex; flex-direction: column; gap: 7px; }
+.step { display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--muted); }
+.step.active { color: var(--accent-light); }
+.step.done { color: var(--success); }
+.step.error { color: var(--error); }
+.step-dot {
+  width: 22px; height: 22px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0;
+}
+.step.active .step-dot { background: var(--accent)33; border-color: var(--accent); color: var(--accent-light); }
+.step.done .step-dot { background: var(--success)22; border-color: var(--success); color: var(--success); }
+.step.error .step-dot { background: var(--error)22; border-color: var(--error); color: var(--error); }
+.spin { animation: spin 0.7s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.progress { height: 3px; background: var(--surface2); border-radius: 2px; margin-top: 12px; overflow: hidden; }
+.progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-light)); border-radius: 2px; transition: width 0.4s ease; }
+
+/* ── Frame list ── */
+.frame-list { display: flex; flex-direction: column; gap: 5px; max-height: 220px; overflow-y: auto; }
+.frame-item {
+  padding: 8px 11px; border: 1px solid var(--border); border-radius: 7px; cursor: pointer;
+  font-size: 12px; color: var(--muted); transition: all 0.15s; display: flex; align-items: center; gap: 8px;
+}
+.frame-item:hover { border-color: var(--accent)55; color: var(--text); background: var(--surface2); }
+.frame-item.active { border-color: var(--accent); background: var(--accent)11; color: var(--accent-light); }
+.frame-icon { font-size: 14px; }
+.frame-dim { font-size: 10px; color: var(--muted); margin-left: auto; }
+
+/* ── Color swatches ── */
+.swatches { display: flex; flex-wrap: wrap; gap: 5px; }
+.swatch { width: 28px; height: 28px; border-radius: 5px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.15s; position: relative; }
+.swatch:hover { transform: scale(1.2); z-index: 1; }
+.font-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.font-tag { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 3px 8px; font-size: 11px; color: var(--muted); }
+
+/* ── Main content ── */
+.content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.tabs { display: flex; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 20px; gap: 2px; flex-shrink: 0; }
+.tab { padding: 14px 16px; font-size: 12px; font-weight: 700; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent-light); border-bottom-color: var(--accent); }
+
+.tab-pane { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+.tab-pane.active { display: flex; }
+
+/* ── Code view ── */
+.code-header { padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.lang-tag { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 3px 9px; font-size: 11px; font-weight: 700; font-family: monospace; color: var(--muted); }
+.copy-btn { margin-left: auto; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 5px 12px; font-size: 11px; cursor: pointer; transition: all 0.15s; }
+.copy-btn:hover { color: var(--text); border-color: var(--accent)55; }
+.copy-btn.ok { background: var(--success)22; color: var(--success); border-color: var(--success)44; }
+pre { flex: 1; overflow: auto; padding: 20px; font-family: 'Fira Code', Consolas, monospace; font-size: 12.5px; line-height: 1.75; color: #c9d1d9; background: var(--bg); white-space: pre; tab-size: 2; }
+
+/* ── Preview ── */
+.preview-wrap { flex: 1; overflow: auto; background: #e5e7eb; display: flex; align-items: flex-start; justify-content: center; padding: 20px; }
+iframe { border: none; box-shadow: 0 4px 40px #0008; border-radius: 4px; background: #fff; }
+
+/* ── Empty state ── */
+.empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: var(--muted); padding: 40px; text-align: center; }
+.empty-ico { font-size: 52px; opacity: 0.3; }
+.empty h3 { font-size: 17px; color: #94a3b8; }
+.empty p { font-size: 13px; line-height: 1.6; max-width: 320px; }
+
+/* ── Image progress ── */
+.img-progress { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-top: 10px; font-size: 12px; }
+.img-progress-bar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+.img-progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-light)); border-radius: 2px; transition: width 0.3s; }
+
+/* ── Alert ── */
+.alert { padding: 10px 12px; border-radius: 8px; font-size: 12px; line-height: 1.5; display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; }
+.alert-warn { background: var(--warning)11; border: 1px solid var(--warning)33; color: #fcd34d; }
+.alert-info { background: var(--accent)11; border: 1px solid var(--accent)33; color: var(--accent-light); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Figma <em>→</em> HTML</div>
+  <div class="pill">with Images</div>
+  <div class="header-right">
+    <span>Open this file locally in your browser</span>
+    <span style="color:var(--border)">|</span>
+    <span id="statusDot" style="color:var(--muted)">⬤ Ready</span>
+  </div>
+</div>
+
+<div class="body">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <div class="sidebar">
+
+    <!-- Config -->
+    <div class="panel">
+      <div class="panel-title">Figma Config</div>
+      <label>Personal Access Token</label>
+      <input type="password" id="token" value="figd_grWGKbm7UgwzBax5oqHoQ0uCN8NpFWuleogfGp4z">
+      <label>File Key</label>
+      <input type="text" id="fileKey" value="bRRhWvIgfW3zX3ukWVAoO4">
+      <label>Image Scale</label>
+      <select id="imgScale">
+        <option value="1">1x (faster)</option>
+        <option value="2" selected>2x (recommended)</option>
+        <option value="3">3x (high quality)</option>
+      </select>
+      <button class="btn btn-primary" id="fetchBtn" onclick="start()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        Fetch & Convert
+      </button>
+    </div>
+
+    <!-- Steps -->
+    <div class="panel" id="stepsPanel" style="display:none">
+      <div class="panel-title">Progress</div>
+      <div class="steps">
+        <div class="step" id="s1"><div class="step-dot">1</div><span>Fetching file structure</span></div>
+        <div class="step" id="s2"><div class="step-dot">2</div><span>Extracting design tokens</span></div>
+        <div class="step" id="s3"><div class="step-dot">3</div><span>Fetching node images</span></div>
+        <div class="step" id="s4"><div class="step-dot">4</div><span>Downloading images</span></div>
+        <div class="step" id="s5"><div class="step-dot">5</div><span>Generating HTML/CSS</span></div>
+      </div>
+      <div class="progress"><div class="progress-bar" id="pbar" style="width:0"></div></div>
+      <div id="imgProgressWrap" style="display:none" class="img-progress">
+        <div id="imgProgressText">Downloading images...</div>
+        <div class="img-progress-bar"><div class="img-progress-fill" id="imgPbar" style="width:0"></div></div>
+      </div>
+    </div>
+
+    <!-- Frame selector -->
+    <div class="panel" id="framesPanel" style="display:none">
+      <div class="panel-title">Select Frame</div>
+      <div class="frame-list" id="frameList"></div>
+    </div>
+
+    <!-- Tokens -->
+    <div class="panel" id="tokensPanel" style="display:none">
+      <div class="panel-title">Colors</div>
+      <div class="swatches" id="swatches"></div>
+      <div class="panel-title" style="margin-top:12px">Fonts</div>
+      <div class="font-tags" id="fontTags"></div>
+    </div>
+
+    <!-- Download -->
+    <div class="panel" id="dlPanel" style="display:none">
+      <div class="panel-title">Export</div>
+      <button class="btn btn-green" onclick="downloadFile()">⬇ Download ZIP (HTML + CSS + Images)</button>
+      <button class="btn btn-ghost" onclick="copyFull()">📋 Copy Full Code</button>
+    </div>
+
+  </div>
+
+  <!-- ═══ CONTENT ═══ -->
+  <div class="content">
+    <div class="tabs">
+      <div class="tab active" onclick="tab('preview')">👁 Preview</div>
+      <div class="tab" onclick="tab('html')">HTML</div>
+      <div class="tab" onclick="tab('css')">CSS</div>
+      <div class="tab" onclick="tab('full')">Full File</div>
+    </div>
+
+    <!-- Preview -->
+    <div class="tab-pane active" id="pane-preview">
+      <div class="empty" id="emptyPreview">
+        <div class="empty-ico">🖼</div>
+        <h3>Preview will appear here</h3>
+        <p>Click <strong>Fetch & Convert</strong> to pull your Figma design with all images, then select a frame to generate pixel-perfect HTML.</p>
+      </div>
+      <div class="preview-wrap" id="previewWrap" style="display:none">
+        <iframe id="previewFrame" scrolling="yes"></iframe>
+      </div>
+    </div>
+
+    <!-- HTML -->
+    <div class="tab-pane" id="pane-html">
+      <div class="code-header">
+        <div class="lang-tag">HTML</div>
+        <button class="copy-btn" id="cpHtml" onclick="copyCode('html')">Copy</button>
+      </div>
+      <pre id="codeHtml"><span style="color:var(--muted)">// HTML will appear after generation</span></pre>
+    </div>
+
+    <!-- CSS -->
+    <div class="tab-pane" id="pane-css">
+      <div class="code-header">
+        <div class="lang-tag">CSS</div>
+        <button class="copy-btn" id="cpCss" onclick="copyCode('css')">Copy</button>
+      </div>
+      <pre id="codeCss"><span style="color:var(--muted)">// CSS will appear after generation</span></pre>
+    </div>
+
+    <!-- Full -->
+    <div class="tab-pane" id="pane-full">
+      <div class="code-header">
+        <div class="lang-tag">HTML + CSS + Images</div>
+        <button class="copy-btn" id="cpFull" onclick="copyCode('full')">Copy</button>
+      </div>
+      <pre id="codeFull"><span style="color:var(--muted)">// Full file will appear after generation</span></pre>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════
+let figmaFile = null;
+let allFrames = [];
+let selectedFrameId = null;
+let colors = new Set();
+let fonts = new Set();
+let imageMap = {};     // nodeId -> CDN URL (from Figma API)
+let imageFillMap = {}; // imageRef -> CDN URL (from Figma API)
+let imageBlobs = {};   // key -> { blob, filename, objectURL }
+let generatedHTML = '';
+let generatedCSS = '';
+let generatedFull = '';
+let generatedHTMLForZip = ''; // version with images/ paths
+let generatedCSSForZip = '';  // version with images/ paths
+
+// ═══════════════════════════════════════════════════════════
+// UI HELPERS
+// ═══════════════════════════════════════════════════════════
+function tab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    t.classList.toggle('active', ['preview','html','css','full'][i] === name);
+  });
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('pane-' + name).classList.add('active');
+}
+
+function step(n, state, label) {
+  const el = document.getElementById('s' + n);
+  el.className = 'step ' + state;
+  const dot = el.querySelector('.step-dot');
+  if (state === 'active') dot.innerHTML = '<span class="spin">◌</span>';
+  else if (state === 'done') dot.textContent = '✓';
+  else if (state === 'error') dot.textContent = '✕';
+  else dot.textContent = n;
+  if (label) el.querySelector('span').textContent = label;
+  document.getElementById('pbar').style.width = (n / 5 * 100) + '%';
+}
+
+function setStatus(text, color) {
+  const el = document.getElementById('statusDot');
+  el.textContent = '⬤ ' + text;
+  el.style.color = color || 'var(--muted)';
+}
+
+// ═══════════════════════════════════════════════════════════
+// FIGMA API
+// ═══════════════════════════════════════════════════════════
+async function figmaGet(path) {
+  const token = document.getElementById('token').value.trim();
+  const res = await fetch('https://api.figma.com/v1' + path, {
+    headers: { 'X-Figma-Token': token }
+  });
+  if (!res.ok) throw new Error(`Figma API ${res.status}: ${await res.text()}`);
+  return res.json();
+}
+
+// ═══════════════════════════════════════════════════════════
+// MAIN FLOW
+// ═══════════════════════════════════════════════════════════
+async function start() {
+  document.getElementById('fetchBtn').disabled = true;
+  document.getElementById('stepsPanel').style.display = 'block';
+  setStatus('Working…', 'var(--accent-light)');
+  colors.clear(); fonts.clear(); imageMap = {}; imageFillMap = {}; imageBlobs = {};
+
+  try {
+    // ── Step 1: Fetch file ──
+    step(1, 'active');
+    const fileKey = document.getElementById('fileKey').value.trim();
+    figmaFile = await figmaGet('/files/' + fileKey);
+    step(1, 'done');
+
+    // ── Step 2: Extract tokens & collect frames ──
+    step(2, 'active');
+    allFrames = [];
+    figmaFile.document.children.forEach(page => {
+      (page.children || []).forEach(node => {
+        if (['FRAME','COMPONENT','GROUP'].includes(node.type)) {
+          allFrames.push({ ...node, _page: page.name });
+        }
+      });
+    });
+    walkTokens(figmaFile.document);
+    renderTokens();
+    renderFrameList();
+    step(2, 'done');
+
+    // ── Step 3: Get image URLs for all nodes (renders frames as images) ──
+    step(3, 'active');
+    const scale = document.getElementById('imgScale').value;
+    await fetchAllImages(fileKey, scale);
+    step(3, 'done');
+
+    // ── Step 4: Download images as base64 ──
+    step(4, 'active');
+    await downloadImages();
+    step(4, 'done');
+
+    // ── Step 5: Generate ──
+    step(5, 'active');
+    document.getElementById('tokensPanel').style.display = 'block';
+    document.getElementById('dlPanel').style.display = 'block';
+
+    // Auto-select first frame and generate
+    if (allFrames.length > 0) {
+      selectFrame(allFrames[0].id);
+    }
+    step(5, 'done');
+    setStatus('Done!', 'var(--success)');
+
+  } catch(e) {
+    console.error(e);
+    setStatus('Error', 'var(--error)');
+    for (let i = 1; i <= 5; i++) {
+      const s = document.getElementById('s' + i);
+      if (s.classList.contains('active')) { step(i, 'error', e.message.slice(0, 60)); break; }
+    }
+    alert('Error: ' + e.message + '\n\nMake sure:\n1. This file is open locally (not in an iframe)\n2. Your token is valid\n3. You have access to the Figma file');
+  }
+
+  document.getElementById('fetchBtn').disabled = false;
+}
+
+// ═══════════════════════════════════════════════════════════
+// IMAGE FETCHING - the key part!
+// ═══════════════════════════════════════════════════════════
+async function fetchAllImages(fileKey, scale) {
+  // Collect all node IDs that are frames/groups/components at the top level
+  const nodeIds = allFrames.map(f => f.id);
+
+  // Also collect all image fill refs from the whole document
+  collectImageFillRefs(figmaFile.document);
+
+  // Fetch rendered images for top-level frames (each frame rendered as PNG)
+  if (nodeIds.length > 0) {
+    // Batch in groups of 50
+    const batches = [];
+    for (let i = 0; i < nodeIds.length; i += 50) batches.push(nodeIds.slice(i, i+50));
+
+    for (const batch of batches) {
+      const ids = batch.map(id => encodeURIComponent(id)).join(',');
+      const data = await figmaGet(`/images/${fileKey}?ids=${ids}&format=png&scale=${scale}`);
+      if (data.images) Object.assign(imageMap, data.images);
+    }
+  }
+
+  // Fetch image fills (actual image assets used in fills)
+  if (Object.keys(imageFillRefs).length > 0) {
+    try {
+      const fillData = await figmaGet(`/files/${fileKey}/images`);
+      if (fillData.meta && fillData.meta.images) {
+        Object.assign(imageFillMap, fillData.meta.images);
+      }
+    } catch(e) {
+      console.warn('Could not fetch image fills:', e);
+    }
+  }
+}
+
+let imageFillRefs = {};
+function collectImageFillRefs(node) {
+  if (!node) return;
+  if (node.fills) {
+    node.fills.forEach(f => {
+      if (f.type === 'IMAGE' && f.imageRef) imageFillRefs[f.imageRef] = true;
+    });
+  }
+  (node.children || []).forEach(collectImageFillRefs);
+}
+
+async function downloadImages() {
+  // Merge both maps: nodeId->url and imageRef->url
+  const urls = { ...imageMap, ...imageFillMap };
+  const entries = Object.entries(urls).filter(([, v]) => v);
+  if (entries.length === 0) return;
+
+  document.getElementById('imgProgressWrap').style.display = 'block';
+  let done = 0;
+  let imgCounter = 1;
+
+  const batchSize = 6;
+  for (let i = 0; i < entries.length; i += batchSize) {
+    const batch = entries.slice(i, i + batchSize);
+    await Promise.all(batch.map(async ([key, url]) => {
+      try {
+        const { blob, ext } = await urlToBlob(url);
+        // Build a safe filename
+        const safeKey = key.replace(/[^a-z0-9]/gi, '_').slice(0, 40);
+        const filename = `img_${imgCounter++}_${safeKey}.${ext}`;
+        const objectURL = URL.createObjectURL(blob);
+        imageBlobs[key] = { blob, filename, objectURL };
+      } catch (e) {
+        console.warn('Could not download image:', key, e);
+      }
+      done++;
+      const pct = Math.round(done / entries.length * 100);
+      document.getElementById('imgProgressText').textContent = `Downloading images… ${done}/${entries.length}`;
+      document.getElementById('imgPbar').style.width = pct + '%';
+    }));
+  }
+}
+
+async function urlToBlob(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('Failed to fetch image');
+  const blob = await res.blob();
+  // Prefer webp if supported, else png
+  const isWebP = blob.type === 'image/webp';
+  const isPNG = blob.type === 'image/png';
+  const ext = isWebP ? 'webp' : (isPNG ? 'png' : 'png');
+  return { blob, ext };
+}
+
+// ═══════════════════════════════════════════════════════════
+// TOKEN EXTRACTION
+// ═══════════════════════════════════════════════════════════
+function walkTokens(node) {
+  if (!node) return;
+  (node.fills || []).forEach(f => {
+    if (f.type === 'SOLID' && f.color) colors.add(rgbToHex(f.color));
+  });
+  if (node.style?.fontFamily) fonts.add(node.style.fontFamily);
+  (node.children || []).forEach(walkTokens);
+}
+
+function rgbToHex({r,g,b}) {
+  return '#' + [r,g,b].map(v => Math.round(v*255).toString(16).padStart(2,'0')).join('');
+}
+
+function renderTokens() {
+  const sorted = [...colors].sort((a,b) => luma(b) - luma(a));
+  document.getElementById('swatches').innerHTML = sorted.slice(0,40).map(c =>
+    `<div class="swatch" style="background:${c}" title="${c}" onclick="navigator.clipboard.writeText('${c}')"></div>`
+  ).join('');
+  document.getElementById('fontTags').innerHTML = [...fonts].map(f =>
+    `<div class="font-tag">${f}</div>`
+  ).join('') || '<div class="font-tag" style="color:var(--muted)">None detected</div>';
+}
+
+function luma(hex) {
+  const r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
+  return 0.299*r+0.587*g+0.114*b;
+}
+
+// ═══════════════════════════════════════════════════════════
+// FRAME LIST
+// ═══════════════════════════════════════════════════════════
+function renderFrameList() {
+  document.getElementById('framesPanel').style.display = 'block';
+  document.getElementById('frameList').innerHTML = allFrames.map(f => {
+    const bb = f.absoluteBoundingBox;
+    const dim = bb ? `${Math.round(bb.width)}×${Math.round(bb.height)}` : '';
+    return `<div class="frame-item" id="fi_${CSS.escape(f.id)}" onclick="selectFrame('${f.id}')">
+      <span class="frame-icon">${f.type==='COMPONENT'?'◉':'▣'}</span>
+      <span>${f.name}</span>
+      <span class="frame-dim">${dim}</span>
+    </div>`;
+  }).join('');
+}
+
+function selectFrame(id) {
+  selectedFrameId = id;
+  document.querySelectorAll('.frame-item').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById('fi_' + CSS.escape(id));
+  if (el) el.classList.add('active');
+  generate();
+}
+
+// ═══════════════════════════════════════════════════════════
+// CODE GENERATION
+// ═══════════════════════════════════════════════════════════
+function generate() {
+  const frame = allFrames.find(f => f.id === selectedFrameId);
+  if (!frame) return;
+
+  const bb = frame.absoluteBoundingBox || { x:0, y:0, width:1440, height:900 };
+  const cssRules = [];
+  const usedFonts = new Set();
+  const cssCls = new Map(); // id -> className
+
+  // Walk all nodes and generate CSS
+  function walk(node, depth) {
+    if (!node) return;
+    const cls = 'el_' + node.id.replace(/[^a-z0-9]/gi,'_');
+    cssCls.set(node.id, cls);
+    const rules = nodeCSS(node, bb, frame);
+    if (rules) cssRules.push(`.${cls} { ${rules} }`);
+    if (node.style?.fontFamily) usedFonts.add(node.style.fontFamily);
+    (node.children || []).forEach(c => walk(c, depth+1));
+  }
+  walk(frame, 0);
+
+  // Font import
+  const fontImport = usedFonts.size
+    ? `@import url('https://fonts.googleapis.com/css2?${[...usedFonts].map(f=>`family=${f.replace(/ /g,'+')}:wght@300;400;500;600;700;800;900`).join('&')}&display=swap');\n\n`
+    : '';
+
+  // Base CSS
+  const baseCss = `*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #fff; }
+.frame-root { position: relative; width: ${bb.width}px; max-width: 100%; overflow: hidden; }
+img { max-width: 100%; display: block; }
+.frame-img-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }`;
+
+  generatedCSS = fontImport + baseCss + '\n\n' + cssRules.join('\n');
+  generatedCSSForZip = generatedCSS; // same – no base64 in CSS
+
+  // Helper: get src for preview (objectURL) or zip (images/ path)
+  function getImgSrc(key, forZip) {
+    const entry = imageBlobs[key];
+    if (!entry) return null;
+    return forZip ? `images/${entry.filename}` : entry.objectURL;
+  }
+
+  // Build HTML (forZip = use images/ paths, otherwise objectURLs for preview)
+  function buildNode(node, depth, forZip) {
+    const ind = '  '.repeat(depth);
+    const cls = cssCls.get(node.id) || '';
+    const children = node.children || [];
+
+    if (node.type === 'TEXT') {
+      const txt = (node.characters || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+      return `${ind}<p class="${cls}">${txt}</p>`;
+    }
+
+    if (node.type === 'VECTOR' || node.type === 'BOOLEAN_OPERATION' || node.type === 'STAR' || node.type === 'POLYGON') {
+      const imgSrc = getImgSrc(node.id, forZip);
+      if (imgSrc) {
+        return `${ind}<img class="${cls}" src="${imgSrc}" alt="${escHtml(node.name)}" loading="lazy">`;
+      }
+      return `${ind}<div class="${cls}"></div>`;
+    }
+
+    // Check if this node has an image fill
+    const imgFill = (node.fills||[]).find(f => f.type === 'IMAGE' && f.imageRef);
+
+    if (children.length === 0) {
+      if (imgFill) {
+        const imgSrc = getImgSrc(imgFill.imageRef, forZip);
+        if (imgSrc) {
+          return `${ind}<div class="${cls}"><img style="width:100%;height:100%;object-fit:cover;" src="${imgSrc}" alt="${escHtml(node.name)}" loading="lazy"></div>`;
+        }
+      }
+      return `${ind}<div class="${cls}"></div>`;
+    }
+
+    const childHTML = children.map(c => buildNode(c, depth+1, forZip)).join('\n');
+    if (imgFill) {
+      const imgSrc = getImgSrc(imgFill.imageRef, forZip);
+      if (imgSrc) {
+        return `${ind}<div class="${cls}">\n${ind}  <img style="width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0;" src="${imgSrc}" alt="${escHtml(node.name)}" loading="lazy">\n${childHTML}\n${ind}</div>`;
+      }
+    }
+    return `${ind}<div class="${cls}">\n${childHTML}\n${ind}</div>`;
+  }
+
+  generatedHTML = buildNode(frame, 0, false);   // objectURLs for preview/display
+  generatedHTMLForZip = buildNode(frame, 0, true); // images/ paths for zip
+
+  // For the preview, use the frame-level rendered image if available
+  const frameEntry = imageBlobs[frame.id];
+  const framePreviewSrc = frameEntry ? frameEntry.objectURL : null;
+
+  const previewBody = framePreviewSrc
+    ? `<div style="position:relative;width:${bb.width}px;">
+  <img src="${framePreviewSrc}" style="width:100%;display:block;" alt="${escHtml(frame.name)}">
+</div>`
+    : `<div class="frame-root">${generatedHTML}</div>`;
+
+  // generatedFull uses objectURLs (for in-browser preview/copy)
+  generatedFull = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escHtml(frame.name)}</title>
+  <style>
+${generatedCSS}
+  </style>
+</head>
+<body>
+  <div class="frame-root">
+    ${generatedHTML}
+  </div>
+</body>
+</html>`;
+
+  // Update code panels
+  document.getElementById('codeHtml').textContent = generatedHTMLForZip;
+  document.getElementById('codeCss').textContent = generatedCSSForZip;
+  document.getElementById('codeFull').textContent = `<!-- index.html (links to style.css and images/ folder) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escHtml(frame.name)}</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="frame-root">
+    ${generatedHTMLForZip}
+  </div>
+</body>
+</html>`;
+
+  // Preview: use rendered frame image for accuracy
+  const previewDoc = framePreviewSrc
+    ? `<!DOCTYPE html><html><head><style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#f3f4f6;}</style></head><body>
+<div style="position:relative;display:inline-block;">
+  <img src="${framePreviewSrc}" style="display:block;max-width:100%;" alt="${escHtml(frame.name)}">
+</div></body></html>`
+    : generatedFull;
+
+  const iframe = document.getElementById('previewFrame');
+  iframe.style.width = Math.min(bb.width, 1400) + 'px';
+  iframe.style.height = bb.height + 'px';
+  iframe.srcdoc = previewDoc;
+
+  document.getElementById('emptyPreview').style.display = 'none';
+  document.getElementById('previewWrap').style.display = 'flex';
+  tab('preview');
+}
+
+function nodeCSS(node, rootBB, rootFrame) {
+  const rules = [];
+  const bb = node.absoluteBoundingBox;
+
+  // Position
+  if (bb && rootBB) {
+    rules.push(`position: absolute`);
+    rules.push(`left: ${(bb.x - rootBB.x).toFixed(1)}px`);
+    rules.push(`top: ${(bb.y - rootBB.y).toFixed(1)}px`);
+    rules.push(`width: ${bb.width.toFixed(1)}px`);
+    rules.push(`height: ${bb.height.toFixed(1)}px`);
+  }
+
+  // Fills
+  const fills = (node.fills || []).filter(f => f.visible !== false);
+  const solidFill = fills.find(f => f.type === 'SOLID');
+  const gradFill = fills.find(f => f.type?.startsWith('GRADIENT'));
+  const imgFill = fills.find(f => f.type === 'IMAGE');
+
+  if (node.type !== 'TEXT') {
+    if (solidFill) {
+      const {r,g,b} = solidFill.color;
+      const a = solidFill.opacity ?? solidFill.color.a ?? 1;
+      rules.push(`background-color: rgba(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)},${a.toFixed(2)})`);
+    } else if (gradFill) {
+      const stops = gradFill.gradientStops.map(s => {
+        const {r,g,b,a} = s.color;
+        return `rgba(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)},${a.toFixed(2)}) ${(s.position*100).toFixed(1)}%`;
+      }).join(', ');
+      rules.push(`background: linear-gradient(135deg, ${stops})`);
+    } else if (imgFill) {
+      rules.push(`background-size: cover`);
+      rules.push(`background-position: center`);
+    }
+  }
+
+  // Text color
+  if (node.type === 'TEXT' && solidFill) {
+    const {r,g,b} = solidFill.color;
+    const a = solidFill.opacity ?? solidFill.color.a ?? 1;
+    rules.push(`color: rgba(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)},${a.toFixed(2)})`);
+  }
+
+  // Border radius
+  if (node.cornerRadius) rules.push(`border-radius: ${node.cornerRadius}px`);
+  else if (node.rectangleCornerRadii?.some(r => r > 0)) {
+    rules.push(`border-radius: ${node.rectangleCornerRadii.join('px ')}px`);
+  }
+
+  // Strokes (border)
+  const strokes = (node.strokes || []).filter(s => s.visible !== false);
+  if (strokes.length && node.strokeWeight) {
+    const s = strokes[0];
+    if (s.type === 'SOLID') {
+      const {r,g,b,a} = s.color;
+      const pos = node.strokeAlign === 'INSIDE' ? 'inset' : '';
+      rules.push(`box-shadow: ${pos} 0 0 0 ${node.strokeWeight}px rgba(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)},${(a||1).toFixed(2)})`);
+    }
+  }
+
+  // Effects
+  const effects = (node.effects || []).filter(e => e.visible !== false);
+  const shadows = effects.filter(e => e.type === 'DROP_SHADOW');
+  const innerShadows = effects.filter(e => e.type === 'INNER_SHADOW');
+  const blurEffect = effects.find(e => e.type === 'LAYER_BLUR');
+
+  if (shadows.length || innerShadows.length) {
+    const all = [
+      ...shadows.map(sh => {
+        const {r,g,b,a} = sh.color;
+        return `${sh.offset.x}px ${sh.offset.y}px ${sh.radius}px ${sh.spread||0}px rgba(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)},${a.toFixed(2)})`;
+      }),
+      ...innerShadows.map(sh => {
+        const {r,g,b,a} = sh.color;
+        return `inset ${sh.offset.x}px ${sh.offset.y}px ${sh.radius}px ${sh.spread||0}px rgba(${Math.round(r*255)},${Math.round(g*255)},${Math.round(b*255)},${a.toFixed(2)})`;
+      })
+    ];
+    // Append to existing box-shadow or add new
+    const existingBsIdx = rules.findIndex(r => r.startsWith('box-shadow'));
+    if (existingBsIdx >= 0) rules[existingBsIdx] += ', ' + all.join(', ');
+    else rules.push(`box-shadow: ${all.join(', ')}`);
+  }
+  if (blurEffect) rules.push(`filter: blur(${blurEffect.radius}px)`);
+
+  // Opacity
+  if (node.opacity !== undefined && node.opacity < 0.999) rules.push(`opacity: ${node.opacity.toFixed(2)}`);
+
+  // Overflow
+  if (node.clipsContent) rules.push(`overflow: hidden`);
+
+  // Text styles
+  if (node.type === 'TEXT' && node.style) {
+    const st = node.style;
+    if (st.fontFamily) rules.push(`font-family: '${st.fontFamily}', sans-serif`);
+    if (st.fontSize) rules.push(`font-size: ${st.fontSize}px`);
+    if (st.fontWeight) rules.push(`font-weight: ${st.fontWeight}`);
+    if (st.lineHeightPx) rules.push(`line-height: ${st.lineHeightPx.toFixed(1)}px`);
+    if (st.letterSpacing && st.letterSpacing !== 0) rules.push(`letter-spacing: ${st.letterSpacing.toFixed(2)}px`);
+    const alignMap = { LEFT:'left', RIGHT:'right', CENTER:'center', JUSTIFIED:'justify' };
+    if (st.textAlignHorizontal) rules.push(`text-align: ${alignMap[st.textAlignHorizontal]||'left'}`);
+    if (st.italic) rules.push(`font-style: italic`);
+    if (st.textDecoration === 'UNDERLINE') rules.push(`text-decoration: underline`);
+    if (st.textCase === 'UPPER') rules.push(`text-transform: uppercase`);
+    if (st.textCase === 'LOWER') rules.push(`text-transform: lowercase`);
+    rules.push(`white-space: pre-wrap`);
+  }
+
+  // Auto layout / flexbox
+  if (node.layoutMode && node.layoutMode !== 'NONE') {
+    rules.push(`display: flex`);
+    rules.push(`flex-direction: ${node.layoutMode === 'HORIZONTAL' ? 'row' : 'column'}`);
+    if (node.itemSpacing) rules.push(`gap: ${node.itemSpacing}px`);
+    const jmap = { MIN:'flex-start', MAX:'flex-end', CENTER:'center', SPACE_BETWEEN:'space-between' };
+    if (node.primaryAxisAlignItems) rules.push(`justify-content: ${jmap[node.primaryAxisAlignItems]||'flex-start'}`);
+    if (node.counterAxisAlignItems) rules.push(`align-items: ${jmap[node.counterAxisAlignItems]||'flex-start'}`);
+    const pt = node.paddingTop||0, pr = node.paddingRight||0, pb = node.paddingBottom||0, pl = node.paddingLeft||0;
+    if (pt||pr||pb||pl) rules.push(`padding: ${pt}px ${pr}px ${pb}px ${pl}px`);
+  }
+
+  return rules.join('; ');
+}
+
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ═══════════════════════════════════════════════════════════
+// COPY / DOWNLOAD
+// ═══════════════════════════════════════════════════════════
+function copyCode(which) {
+  const map = { html: generatedHTML, css: generatedCSS, full: generatedFull };
+  navigator.clipboard.writeText(map[which] || '');
+  const btn = document.getElementById('cp' + which.charAt(0).toUpperCase() + which.slice(1));
+  if (btn) { btn.textContent = '✓ Copied!'; btn.classList.add('ok'); setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('ok'); }, 2000); }
+}
+
+function copyFull() { navigator.clipboard.writeText(generatedFull); }
+
+async function downloadFile() {
+  if (!generatedHTMLForZip) return;
+
+  const frame = allFrames.find(f => f.id === selectedFrameId);
+  const name = (frame?.name || 'marwar-fresh').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
+  const zip = new JSZip();
+
+  // index.html — references style.css and images/
+  const indexHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escHtml(frame?.name || name)}</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="frame-root">
+    ${generatedHTMLForZip}
+  </div>
+</body>
+</html>`;
+
+  zip.file('index.html', indexHTML);
+  zip.file('style.css', generatedCSSForZip);
+
+  // Add all images into the images/ folder
+  const imgFolder = zip.folder('images');
+  const blobEntries = Object.values(imageBlobs);
+  for (const { blob, filename } of blobEntries) {
+    imgFolder.file(filename, blob);
+  }
+
+  const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(zipBlob),
+    download: name + '.zip'
+  });
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+</script>
+</body>
+</html>
