@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Figma → HTML Converter | Marwar Fresh</title>
+  <title>Figma → HTML Converter</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     :root {
@@ -570,6 +570,341 @@
       color: var(--accent-light);
     }
 
+    /* ── CSS Editor ── */
+    .preview-split {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .css-editor-panel {
+      width: 440px;
+      min-width: 320px;
+      max-width: 60%;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: none;
+      flex-direction: column;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    .css-editor-panel.open {
+      display: flex;
+    }
+
+    .css-editor-header {
+      padding: 10px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .css-editor-header .lang-tag {
+      background: linear-gradient(135deg, #6c47ff22, #9d7dff22);
+      border-color: var(--accent)44;
+      color: var(--accent-light);
+    }
+
+    .css-editor-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .css-editor-title .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .css-editor-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 5px;
+    }
+
+    .css-editor-actions button {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 5px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .css-editor-actions button:hover {
+      color: var(--text);
+      border-color: var(--accent)55;
+      background: var(--accent)11;
+    }
+
+    .css-editor-actions button.btn-reset:hover {
+      border-color: var(--error)55;
+      color: var(--error);
+      background: var(--error)11;
+    }
+
+    .css-editor-actions button.btn-apply {
+      background: var(--accent)22;
+      border-color: var(--accent)55;
+      color: var(--accent-light);
+    }
+
+    .css-editor-actions button.btn-apply:hover {
+      background: var(--accent)33;
+    }
+
+    .css-editor-body {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .css-line-numbers {
+      width: 44px;
+      padding: 16px 6px 16px 10px;
+      background: var(--bg);
+      border-right: 1px solid var(--border);
+      font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.65;
+      color: var(--border);
+      text-align: right;
+      overflow: hidden;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .css-editor-textarea {
+      flex: 1;
+      background: var(--bg);
+      color: #c9d1d9;
+      border: none;
+      padding: 16px 14px;
+      font-family: 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.65;
+      resize: none;
+      outline: none;
+      white-space: pre;
+      tab-size: 2;
+      overflow: auto;
+    }
+
+    .css-editor-textarea::placeholder {
+      color: var(--muted);
+      opacity: 0.5;
+    }
+
+    .css-editor-footer {
+      padding: 6px 14px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    .css-editor-footer kbd {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: inherit;
+      font-size: 10px;
+    }
+
+    .css-editor-resize {
+      width: 5px;
+      cursor: col-resize;
+      background: transparent;
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 10;
+      transition: background 0.15s;
+    }
+
+    .css-editor-resize:hover,
+    .css-editor-resize.dragging {
+      background: var(--accent)66;
+    }
+
+    .editor-toggle-btn {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 20;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 16px #0004;
+      backdrop-filter: blur(8px);
+    }
+
+    .editor-toggle-btn:hover {
+      color: var(--accent-light);
+      border-color: var(--accent);
+      background: var(--surface2);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px #0006;
+    }
+
+    .editor-toggle-btn.active {
+      background: var(--accent)22;
+      border-color: var(--accent);
+      color: var(--accent-light);
+    }
+
+    .editor-change-indicator {
+      display: none;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--warning);
+    }
+
+    .editor-change-indicator.visible {
+      display: inline-block;
+    }
+
+    /* ── Element Inspector ── */
+    .inspector-toggle-btn {
+      position: absolute;
+      top: 12px;
+      left: 148px;
+      z-index: 20;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 16px #0004;
+      backdrop-filter: blur(8px);
+    }
+
+    .inspector-toggle-btn:hover {
+      color: var(--accent-light);
+      border-color: var(--accent);
+      background: var(--surface2);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px #0006;
+    }
+
+    .inspector-toggle-btn.active {
+      background: #2563eb22;
+      border-color: #3b82f6;
+      color: #60a5fa;
+    }
+
+    .inspector-toggle-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .inspector-breadcrumb {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      z-index: 20;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      display: none;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 16px #0004;
+      backdrop-filter: blur(8px);
+      max-width: 80%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .inspector-breadcrumb.visible {
+      display: flex;
+    }
+
+    .inspector-breadcrumb .el-tag {
+      color: #60a5fa;
+    }
+
+    .inspector-breadcrumb .el-class {
+      color: #a78bfa;
+    }
+
+    .inspector-breadcrumb .el-dim {
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .css-editor-textarea.has-highlight {
+      /* We use a background gradient trick for line highlight */
+    }
+
+    .css-highlight-badge {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      background: #2563eb22;
+      border: 1px solid #3b82f644;
+      color: #60a5fa;
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      margin-left: 4px;
+    }
+
+    .css-highlight-badge.visible {
+      display: inline-flex;
+    }
+
     /* Scrollbar */
     ::-webkit-scrollbar {
       width: 6px;
@@ -697,8 +1032,54 @@
           <p>Click <strong>Fetch & Convert</strong> to pull your Figma design with all images, then select a frame to
             generate pixel-perfect HTML.</p>
         </div>
-        <div class="preview-wrap" id="previewWrap" style="display:none">
-          <iframe id="previewFrame" scrolling="yes"></iframe>
+        <div class="preview-split" id="previewSplit" style="display:none">
+          <!-- CSS Editor Panel -->
+          <div class="css-editor-panel" id="cssEditorPanel">
+            <div class="css-editor-header">
+              <div class="lang-tag">CSS</div>
+              <div class="css-editor-title">
+                <span class="live-dot"></span>
+                Live Editor
+              </div>
+              <div class="css-editor-actions">
+                <button class="btn-apply" onclick="applyEditorCSS()" title="Apply changes (Ctrl+S)">✓ Apply</button>
+                <button onclick="copyEditorCSS()" title="Copy CSS">📋 Copy</button>
+                <button class="btn-reset" onclick="resetEditorCSS()" title="Reset to original">↺ Reset</button>
+              </div>
+            </div>
+            <div class="css-editor-body">
+              <div class="css-line-numbers" id="cssLineNumbers">1</div>
+              <textarea class="css-editor-textarea" id="cssEditorTextarea" spellcheck="false"
+                placeholder="/* Your generated CSS will appear here... */"></textarea>
+            </div>
+            <div class="css-editor-footer">
+              <span>Live preview</span>
+              <span style="color:var(--border)">|</span>
+              <span><kbd>Ctrl</kbd>+<kbd>S</kbd> apply</span>
+              <span style="color:var(--border)">|</span>
+              <span id="cssEditorStatus">Ready</span>
+              <span class="editor-change-indicator" id="cssChangeIndicator"></span>
+              <span class="css-highlight-badge" id="cssHighlightBadge">⎯ .el_selected</span>
+            </div>
+            <div class="css-editor-resize" id="cssEditorResize"></div>
+          </div>
+          <!-- Preview Area -->
+          <div class="preview-wrap" id="previewWrap" style="position:relative;">
+            <button class="editor-toggle-btn" id="editorToggleBtn" onclick="toggleCSSEditor()">
+              ✎ CSS Editor
+            </button>
+            <button class="inspector-toggle-btn" id="inspectorToggleBtn" onclick="toggleInspector()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 3a2 2 0 0 0-2 2"/><path d="M19 3a2 2 0 0 1 2 2"/><path d="M21 19a2 2 0 0 1-2 2"/><path d="M5 21a2 2 0 0 1-2-2"/>
+                <path d="M9 3h1"/><path d="M9 21h1"/><path d="M14 3h1"/><path d="M14 21h1"/>
+                <path d="M3 9v1"/><path d="M21 9v1"/><path d="M3 14v1"/><path d="M21 14v1"/>
+                <line x1="7" y1="8" x2="17" y2="8"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="7" y1="16" x2="13" y2="16"/>
+              </svg>
+              Select
+            </button>
+            <div class="inspector-breadcrumb" id="inspectorBreadcrumb"></div>
+            <iframe id="previewFrame" scrolling="yes"></iframe>
+          </div>
         </div>
       </div>
 
@@ -1170,7 +1551,12 @@ ${generatedCSS}
       iframe.srcdoc = previewDoc;
 
       document.getElementById('emptyPreview').style.display = 'none';
+      document.getElementById('previewSplit').style.display = 'flex';
       document.getElementById('previewWrap').style.display = 'flex';
+
+      // Populate the CSS editor
+      populateCSSEditor();
+
       tab('preview');
     }
 
@@ -1429,6 +1815,491 @@ ${generatedCSS}
       a.click();
       URL.revokeObjectURL(a.href);
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // CSS EDITOR
+    // ═══════════════════════════════════════════════════════════
+    let originalEditorCSS = '';
+    let cssEditorOpen = false;
+    let editorDebounceTimer = null;
+
+    function populateCSSEditor() {
+      const textarea = document.getElementById('cssEditorTextarea');
+      textarea.value = generatedCSS;
+      originalEditorCSS = generatedCSS;
+      updateLineNumbers();
+      document.getElementById('cssChangeIndicator').classList.remove('visible');
+      document.getElementById('cssEditorStatus').textContent = 'Ready';
+    }
+
+    function toggleCSSEditor() {
+      const panel = document.getElementById('cssEditorPanel');
+      const btn = document.getElementById('editorToggleBtn');
+      cssEditorOpen = !cssEditorOpen;
+      panel.classList.toggle('open', cssEditorOpen);
+      btn.classList.toggle('active', cssEditorOpen);
+      btn.innerHTML = cssEditorOpen ? '✎ Hide Editor' : '✎ CSS Editor';
+    }
+
+    function updateLineNumbers() {
+      const textarea = document.getElementById('cssEditorTextarea');
+      const lines = textarea.value.split('\n').length;
+      const nums = [];
+      for (let i = 1; i <= lines; i++) nums.push(i);
+      document.getElementById('cssLineNumbers').textContent = nums.join('\n');
+    }
+
+    function applyEditorCSS() {
+      const textarea = document.getElementById('cssEditorTextarea');
+      const newCSS = textarea.value;
+      const iframe = document.getElementById('previewFrame');
+
+      // Update the preview iframe
+      try {
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        let styleEl = iframeDoc.getElementById('live-editor-style');
+        if (!styleEl) {
+          // Remove original style and add new one
+          const origStyle = iframeDoc.querySelector('style');
+          if (origStyle) origStyle.textContent = newCSS;
+        } else {
+          styleEl.textContent = newCSS;
+        }
+
+        // Also rebuild the srcdoc with the new CSS for consistency
+        const frame = allFrames.find(f => f.id === selectedFrameId);
+        if (frame) {
+          const bb = frame.absoluteBoundingBox || { width: 1440, height: 900 };
+          // Update the global generatedCSS
+          generatedCSS = newCSS;
+          generatedCSSForZip = newCSS;
+
+          // Rebuild preview doc with new CSS
+          const previewDoc = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>${newCSS}</style>
+</head>
+<body>
+  <div class="frame-root">
+    ${generatedHTML}
+  </div>
+</body>
+</html>`;
+          iframe.srcdoc = previewDoc;
+
+          // Re-inject inspector if active
+          if (inspectorActive) {
+            iframe.addEventListener('load', function onLoad() {
+              iframe.removeEventListener('load', onLoad);
+              injectInspector(iframe);
+            });
+          }
+
+          // Update code panels too
+          document.getElementById('codeCss').textContent = newCSS;
+        }
+
+        document.getElementById('cssEditorStatus').textContent = '✓ Applied';
+        document.getElementById('cssChangeIndicator').classList.remove('visible');
+        setTimeout(() => {
+          document.getElementById('cssEditorStatus').textContent = 'Ready';
+        }, 2000);
+      } catch (e) {
+        console.error('Error applying CSS:', e);
+        document.getElementById('cssEditorStatus').textContent = '✕ Error';
+      }
+    }
+
+    function resetEditorCSS() {
+      const textarea = document.getElementById('cssEditorTextarea');
+      textarea.value = originalEditorCSS;
+      generatedCSS = originalEditorCSS;
+      generatedCSSForZip = originalEditorCSS;
+      updateLineNumbers();
+      applyEditorCSS();
+      document.getElementById('cssEditorStatus').textContent = '↺ Reset';
+      document.getElementById('cssChangeIndicator').classList.remove('visible');
+      setTimeout(() => {
+        document.getElementById('cssEditorStatus').textContent = 'Ready';
+      }, 2000);
+    }
+
+    function copyEditorCSS() {
+      const textarea = document.getElementById('cssEditorTextarea');
+      navigator.clipboard.writeText(textarea.value);
+      document.getElementById('cssEditorStatus').textContent = '📋 Copied!';
+      setTimeout(() => {
+        document.getElementById('cssEditorStatus').textContent = 'Ready';
+      }, 2000);
+    }
+
+    // Live editing: sync textarea scroll with line numbers, update on input
+    document.getElementById('cssEditorTextarea').addEventListener('input', function() {
+      updateLineNumbers();
+      document.getElementById('cssChangeIndicator').classList.add('visible');
+      // Auto-apply with debounce
+      clearTimeout(editorDebounceTimer);
+      editorDebounceTimer = setTimeout(() => {
+        applyEditorCSS();
+      }, 600);
+    });
+
+    document.getElementById('cssEditorTextarea').addEventListener('scroll', function() {
+      document.getElementById('cssLineNumbers').scrollTop = this.scrollTop;
+    });
+
+    // Ctrl+S to apply
+    document.getElementById('cssEditorTextarea').addEventListener('keydown', function(e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        applyEditorCSS();
+      }
+      // Tab support
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = this.selectionStart;
+        const end = this.selectionEnd;
+        this.value = this.value.substring(0, start) + '  ' + this.value.substring(end);
+        this.selectionStart = this.selectionEnd = start + 2;
+        updateLineNumbers();
+      }
+    });
+
+    // Resize handle for the editor panel
+    (function() {
+      const handle = document.getElementById('cssEditorResize');
+      const panel = document.getElementById('cssEditorPanel');
+      let startX, startWidth;
+
+      handle.addEventListener('mousedown', function(e) {
+        startX = e.clientX;
+        startWidth = panel.offsetWidth;
+        handle.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+
+        function onMouseMove(e) {
+          const diff = e.clientX - startX;
+          const newWidth = Math.max(320, Math.min(startWidth + diff, window.innerWidth * 0.6));
+          panel.style.width = newWidth + 'px';
+        }
+
+        function onMouseUp() {
+          handle.classList.remove('dragging');
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+        }
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      });
+    })();
+
+    // ═══════════════════════════════════════════════════════════
+    // ELEMENT INSPECTOR
+    // ═══════════════════════════════════════════════════════════
+    let inspectorActive = false;
+    let selectedInspectorClass = null;
+
+    function toggleInspector() {
+      inspectorActive = !inspectorActive;
+      const btn = document.getElementById('inspectorToggleBtn');
+      btn.classList.toggle('active', inspectorActive);
+
+      const iframe = document.getElementById('previewFrame');
+      if (inspectorActive) {
+        injectInspector(iframe);
+      } else {
+        removeInspector(iframe);
+        document.getElementById('inspectorBreadcrumb').classList.remove('visible');
+      }
+    }
+
+    function injectInspector(iframe) {
+      const tryInject = () => {
+        try {
+          const doc = iframe.contentDocument || iframe.contentWindow.document;
+          if (!doc || !doc.body) { setTimeout(tryInject, 100); return; }
+
+          // Remove existing inspector elements if any
+          const existing = doc.getElementById('__inspector_overlay');
+          if (existing) existing.remove();
+          const existingTooltip = doc.getElementById('__inspector_tooltip');
+          if (existingTooltip) existingTooltip.remove();
+          const existingStyle = doc.getElementById('__inspector_style');
+          if (existingStyle) existingStyle.remove();
+
+          // Inject inspector styles
+          const style = doc.createElement('style');
+          style.id = '__inspector_style';
+          style.textContent = `
+            #__inspector_overlay {
+              position: fixed;
+              pointer-events: none;
+              z-index: 999999;
+              border: 2px solid #3b82f6;
+              background: rgba(59, 130, 246, 0.08);
+              transition: all 0.08s ease-out;
+              display: none;
+              box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+            }
+            #__inspector_overlay.active {
+              display: block;
+            }
+            #__inspector_overlay.selected {
+              border-color: #f59e0b;
+              background: rgba(245, 158, 11, 0.08);
+              box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.3);
+            }
+            #__inspector_tooltip {
+              position: fixed;
+              z-index: 1000000;
+              background: #1e293b;
+              color: #e2e8f0;
+              border: 1px solid #334155;
+              border-radius: 6px;
+              padding: 6px 10px;
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
+              font-size: 11px;
+              line-height: 1.5;
+              pointer-events: none;
+              display: none;
+              box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+              max-width: 320px;
+              white-space: nowrap;
+            }
+            #__inspector_tooltip.active {
+              display: block;
+            }
+            #__inspector_tooltip .tip-tag { color: #60a5fa; font-weight: 700; }
+            #__inspector_tooltip .tip-class { color: #a78bfa; }
+            #__inspector_tooltip .tip-dim { color: #64748b; margin-left: 6px; }
+            #__inspector_margin {
+              position: fixed;
+              pointer-events: none;
+              z-index: 999998;
+              display: none;
+            }
+            #__inspector_margin.active {
+              display: block;
+            }
+            body.__inspector_active * {
+              cursor: crosshair !important;
+            }
+          `;
+          doc.head.appendChild(style);
+
+          // Create overlay element
+          const overlay = doc.createElement('div');
+          overlay.id = '__inspector_overlay';
+          doc.body.appendChild(overlay);
+
+          // Create tooltip
+          const tooltip = doc.createElement('div');
+          tooltip.id = '__inspector_tooltip';
+          doc.body.appendChild(tooltip);
+
+          doc.body.classList.add('__inspector_active');
+
+          // Track events
+          let hoveredEl = null;
+
+          const onMouseMove = (e) => {
+            const el = doc.elementFromPoint(e.clientX, e.clientY);
+            if (!el || el === overlay || el === tooltip || el.id?.startsWith('__inspector')) return;
+            hoveredEl = el;
+
+            const rect = el.getBoundingClientRect();
+            overlay.classList.add('active');
+            overlay.classList.remove('selected');
+            overlay.style.left = rect.left + 'px';
+            overlay.style.top = rect.top + 'px';
+            overlay.style.width = rect.width + 'px';
+            overlay.style.height = rect.height + 'px';
+
+            // Tooltip content
+            const tag = el.tagName.toLowerCase();
+            const cls = el.className ? '.' + el.className.split(' ').filter(c => !c.startsWith('__')).join('.') : '';
+            const dim = Math.round(rect.width) + ' × ' + Math.round(rect.height);
+            tooltip.innerHTML = '<span class="tip-tag">' + tag + '</span>' +
+              (cls ? '<span class="tip-class">' + cls + '</span>' : '') +
+              '<span class="tip-dim">' + dim + '</span>';
+            tooltip.classList.add('active');
+
+            // Position tooltip
+            let tx = e.clientX + 12;
+            let ty = rect.top - 34;
+            if (ty < 4) ty = rect.bottom + 8;
+            if (tx + 260 > doc.documentElement.clientWidth) tx = e.clientX - 260;
+            tooltip.style.left = tx + 'px';
+            tooltip.style.top = ty + 'px';
+          };
+
+          const onMouseLeave = () => {
+            overlay.classList.remove('active');
+            tooltip.classList.remove('active');
+            hoveredEl = null;
+          };
+
+          const onClick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!hoveredEl) return;
+
+            const el = hoveredEl;
+            const rect = el.getBoundingClientRect();
+
+            // Show selected state
+            overlay.classList.add('active', 'selected');
+            overlay.style.left = rect.left + 'px';
+            overlay.style.top = rect.top + 'px';
+            overlay.style.width = rect.width + 'px';
+            overlay.style.height = rect.height + 'px';
+
+            // Get class info
+            const tag = el.tagName.toLowerCase();
+            const classes = el.className ? el.className.split(' ').filter(c => !c.startsWith('__')) : [];
+            const elClass = classes.find(c => c.startsWith('el_')) || classes[0] || '';
+            const dim = Math.round(rect.width) + ' × ' + Math.round(rect.height);
+
+            // Send message to parent
+            window.parent.postMessage({
+              type: 'inspector-select',
+              tag: tag,
+              className: elClass,
+              allClasses: classes,
+              dimensions: dim
+            }, '*');
+          };
+
+          doc.addEventListener('mousemove', onMouseMove, true);
+          doc.addEventListener('mouseleave', onMouseLeave, true);
+          doc.addEventListener('click', onClick, true);
+
+          // Store cleanup refs
+          iframe.__inspectorCleanup = () => {
+            try {
+              doc.removeEventListener('mousemove', onMouseMove, true);
+              doc.removeEventListener('mouseleave', onMouseLeave, true);
+              doc.removeEventListener('click', onClick, true);
+              doc.body.classList.remove('__inspector_active');
+              overlay.remove();
+              tooltip.remove();
+              style.remove();
+            } catch(e) {}
+          };
+        } catch(e) {
+          console.warn('Inspector injection failed, retrying...', e);
+          setTimeout(tryInject, 150);
+        }
+      };
+      tryInject();
+    }
+
+    function removeInspector(iframe) {
+      if (iframe.__inspectorCleanup) {
+        iframe.__inspectorCleanup();
+        iframe.__inspectorCleanup = null;
+      }
+    }
+
+    // Listen for inspector selections from iframe
+    window.addEventListener('message', function(e) {
+      if (!e.data || e.data.type !== 'inspector-select') return;
+
+      const { tag, className, allClasses, dimensions } = e.data;
+      selectedInspectorClass = className;
+
+      // Update breadcrumb
+      const bc = document.getElementById('inspectorBreadcrumb');
+      bc.innerHTML = '<span class="el-tag">&lt;' + tag + '&gt;</span>' +
+        (className ? ' <span class="el-class">.' + className + '</span>' : '') +
+        ' <span class="el-dim">' + dimensions + '</span>';
+      bc.classList.add('visible');
+
+      // Open editor if not open
+      if (!cssEditorOpen) {
+        toggleCSSEditor();
+      }
+
+      // Find and highlight the CSS rule in the editor
+      if (className) {
+        highlightCSSRule('.' + className);
+      }
+    });
+
+    function highlightCSSRule(selector) {
+      const textarea = document.getElementById('cssEditorTextarea');
+      const css = textarea.value;
+
+      // Find the selector in the CSS text
+      // Look for patterns like ".el_xxx { ... }"
+      const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp('(' + escapedSelector + '\\s*\\{[^}]*\\})', 'g');
+      const match = regex.exec(css);
+
+      if (!match) {
+        // Try a simpler search for just the selector
+        const idx = css.indexOf(selector);
+        if (idx === -1) {
+          document.getElementById('cssEditorStatus').textContent = 'Rule not found';
+          setTimeout(() => { document.getElementById('cssEditorStatus').textContent = 'Ready'; }, 2000);
+          return;
+        }
+        // Find the rule boundaries
+        const ruleStart = idx;
+        const braceOpen = css.indexOf('{', idx);
+        const braceClose = css.indexOf('}', braceOpen);
+        if (braceOpen !== -1 && braceClose !== -1) {
+          selectAndScrollTo(textarea, ruleStart, braceClose + 1, selector);
+        }
+        return;
+      }
+
+      const ruleStart = match.index;
+      const ruleEnd = ruleStart + match[0].length;
+      selectAndScrollTo(textarea, ruleStart, ruleEnd, selector);
+    }
+
+    function selectAndScrollTo(textarea, start, end, selector) {
+      // Focus and select the range
+      textarea.focus();
+      textarea.setSelectionRange(start, end);
+
+      // Calculate line number to scroll to
+      const textBefore = textarea.value.substring(0, start);
+      const lineNumber = textBefore.split('\n').length;
+      const lineHeight = parseFloat(getComputedStyle(textarea).lineHeight) || 19.8; // 12px * 1.65
+      const targetScroll = (lineNumber - 3) * lineHeight; // 3 lines above for context
+      textarea.scrollTop = Math.max(0, targetScroll);
+
+      // Sync line numbers
+      document.getElementById('cssLineNumbers').scrollTop = textarea.scrollTop;
+
+      // Update badge
+      const badge = document.getElementById('cssHighlightBadge');
+      badge.textContent = '⎯ ' + selector;
+      badge.classList.add('visible');
+
+      // Update status
+      document.getElementById('cssEditorStatus').textContent = 'Line ' + lineNumber;
+
+      // Flash effect - briefly change selection color
+      textarea.style.transition = 'none';
+      setTimeout(() => { textarea.style.transition = ''; }, 300);
+    }
+
+    // Re-inject inspector after iframe load (for srcdoc changes)
+    document.getElementById('previewFrame').addEventListener('load', function() {
+      if (inspectorActive) {
+        setTimeout(() => injectInspector(this), 50);
+      }
+    });
   </script>
 </body>
 
